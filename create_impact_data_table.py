@@ -47,7 +47,7 @@ TEMP_PATH = 'temp/temp.tif'
 TEMP_DIR_PATH = 'temp'
 population_raster = os.path.join(PREFIX, 'input/population_uga_2019/population_uga_2019.tif')
 raster_pop = rasterio.open(population_raster)
-exposure_dir = os.path.join(PREFIX, 'output')
+output_dir = os.path.join(PREFIX, 'output')
 flood_dir = os.path.join(PREFIX, 'input/floodscan_data')
 years = [x for x in os.listdir(flood_dir) if os.path.isdir(os.path.join(flood_dir, x))]
 df_districts = gpd.read_file(os.path.join(PREFIX, 'input/admin_boundaries/uga_admbnda_adm1_UBOS_v2.shp'))
@@ -105,6 +105,6 @@ for year in tqdm(years):
             for idx, stat_region in enumerate(stats):
                 stat_region['date'] = date
                 df_impact = df_impact.append(pd.Series(stat_region), ignore_index=True)
-    df_impact.to_csv('output/impact_data_'+str(year)+'.csv')
+    df_impact.to_csv(os.path.join(output_dir, 'impact_data_'+str(year)+'.csv'))
 print(df_impact.head())
-df_impact.to_csv('output/impact_data.csv')
+df_impact.to_csv(os.path.join(output_dir, 'impact_data.csv'))
