@@ -38,7 +38,7 @@ def calculateRasterStats(district, raster):
     return stats
 
 
-GDAL_POLYGONIZE = r"C:\ProgramData\Anaconda3\envs\geo\Scripts\gdal_polygonize.py"
+GDAL_POLYGONIZE = "gdal_polygonize.py"
 PREFIX = '/home/datalake'
 
 # load input data
@@ -61,7 +61,7 @@ for year in tqdm(years):
         # polygonize flood extents
         if os.path.exists(TEMP_DIR_PATH):
             rmtree(TEMP_DIR_PATH)
-        process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
+        process_print([GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
 
         # keep only polygons with floods
