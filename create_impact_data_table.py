@@ -37,13 +37,14 @@ def calculateRasterStats(district, raster):
              'district': district}
     return stats
 
-
+# WINDOWS: GDAL_POLYGONIZE = r"C:\ProgramData\Anaconda3\envs\geo\Scripts\gdal_polygonize.py"
 GDAL_POLYGONIZE = "gdal_polygonize.py"
+# WINDOWS: PREFIX = '.'
 PREFIX = '/home/datalake'
 
 # load input data
-TEMP_PATH = os.path.join(PREFIX, 'output/temp/temp.tif')
-TEMP_DIR_PATH = os.path.join(PREFIX, 'output/temp')
+TEMP_PATH = 'temp/temp.tif'
+TEMP_DIR_PATH = 'temp'
 population_raster = os.path.join(PREFIX, 'input/population_uga_2019/population_uga_2019.tif')
 raster_pop = rasterio.open(population_raster)
 exposure_dir = os.path.join(PREFIX, 'output')
@@ -61,6 +62,8 @@ for year in tqdm(years):
         # polygonize flood extents
         if os.path.exists(TEMP_DIR_PATH):
             rmtree(TEMP_DIR_PATH)
+        # WINDOWS: process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
+        #                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
         process_print([GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
 
