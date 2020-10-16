@@ -12,11 +12,6 @@ import pandas as pd
 from tqdm import tqdm
 
 
-GDAL_POLYGONIZE = r"C:\ProgramData\Anaconda3\envs\geo\Scripts\gdal_polygonize.py"
-TEMP_PATH = 'output/temp/temp.tif'
-TEMP_DIR_PATH = 'output/temp'
-
-
 def process_print(command_args):
     process = subprocess.Popen(command_args, stdout=subprocess.PIPE)
     stdout = process.communicate()[0]
@@ -34,40 +29,47 @@ def clipTiffWithShapes(src, shapes):
 
 
 def calculateRasterStats(district, raster):
-
     # array = raster.read(masked=True)
     band = raster[0]
     band = band[~np.isnan(band)]
-
     theSum = int(band.sum())
     stats = {'affected_population': theSum,
              'district': district}
     return stats
 
 
-population_raster = 'input/population_uga_2019/population_uga_2019.tif'
+GDAL_POLYGONIZE = r"C:\ProgramData\Anaconda3\envs\geo\Scripts\gdal_polygonize.py"
+PREFIX = '/home/datalake'
+
+# load input data
+TEMP_PATH = os.path.join(PREFIX, 'output/temp/temp.tif')
+TEMP_DIR_PATH = os.path.join(PREFIX, 'output/temp')
+population_raster = os.path.join(PREFIX, 'input/population_uga_2019/population_uga_2019.tif')
 raster_pop = rasterio.open(population_raster)
-exposure_dir = 'output'
-flood_dir = 'input/floodscan_data'
+exposure_dir = os.path.join(PREFIX, 'output')
+flood_dir = os.path.join(PREFIX, 'input/floodscan_data')
 years = [x for x in os.listdir(flood_dir) if os.path.isdir(os.path.join(flood_dir, x))]
-df_districts = gpd.read_file('input/admin_boundaries/uga_admbnda_adm1_UBOS_v2.shp')
+df_districts = gpd.read_file(os.path.join(PREFIX, 'input/admin_boundaries/uga_admbnda_adm1_UBOS_v2.shp'))
 df_impact = pd.DataFrame()
 
+# loop over years and extract impact data
 for year in tqdm(years):
     flood_rasters = os.listdir(os.path.join(flood_dir, year))
     for flood_raster in flood_rasters:
         date = datetime.strptime(flood_raster.split('_')[3], '%Y%m%d')
 
+        # polygonize flood extents
         if os.path.exists(TEMP_DIR_PATH):
             rmtree(TEMP_DIR_PATH)
         process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
 
-        # keep only floods
+        # keep only polygons with floods
         df = gpd.read_file(TEMP_DIR_PATH)
         df = df[df['DN'] == 1]
         shapes = [feature["geometry"] for ix, feature in df.iterrows()]
 
+        # mask population raster with flood polygons
         out_image, out_transform = rasterio.mask.mask(raster_pop, shapes, crop=True)
         if not (out_image[~np.isnan(out_image)] > 0).any():
             # print('no population affected, skipping day')
