@@ -57,54 +57,57 @@ df_impact = pd.DataFrame()
 for year in tqdm(years):
     flood_rasters = os.listdir(os.path.join(flood_dir, year))
     for flood_raster in flood_rasters:
-        date = datetime.strptime(flood_raster.split('_')[3], '%Y%m%d')
+        try:
+            date = datetime.strptime(flood_raster.split('_')[3], '%Y%m%d')
 
-        # polygonize flood extents
-        if os.path.exists(TEMP_DIR_PATH):
-            rmtree(TEMP_DIR_PATH)
-        # WINDOWS: process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
-        #                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
-        process_print([GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
-                       "-f", "ESRI Shapefile", TEMP_DIR_PATH])
+            # polygonize flood extents
+            if os.path.exists(TEMP_DIR_PATH):
+                rmtree(TEMP_DIR_PATH)
+            # WINDOWS: process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
+            #                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
+            process_print([GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
+                           "-f", "ESRI Shapefile", TEMP_DIR_PATH])
 
-        # keep only polygons with floods
-        df = gpd.read_file(TEMP_DIR_PATH)
-        df = df[df['DN'] == 1]
-        shapes = [feature["geometry"] for ix, feature in df.iterrows()]
+            # keep only polygons with floods
+            df = gpd.read_file(TEMP_DIR_PATH)
+            df = df[df['DN'] == 1]
+            shapes = [feature["geometry"] for ix, feature in df.iterrows()]
 
-        # mask population raster with flood polygons
-        out_image, out_transform = rasterio.mask.mask(raster_pop, shapes, crop=True)
-        if not (out_image[~np.isnan(out_image)] > 0).any():
-            # print('no population affected, skipping day')
-            continue
-        else:
-            out_meta = raster_pop.meta
-            out_meta.update({"driver": "GTiff",
-                             "height": out_image.shape[1],
-                             "width": out_image.shape[2],
-                             "transform": out_transform})
-            with rasterio.open(TEMP_PATH, "w", **out_meta) as dest:
-                dest.write(out_image)
+            # mask population raster with flood polygons
+            out_image, out_transform = rasterio.mask.mask(raster_pop, shapes, crop=True)
+            if not (out_image[~np.isnan(out_image)] > 0).any():
+                # print('no population affected, skipping day')
+                continue
+            else:
+                out_meta = raster_pop.meta
+                out_meta.update({"driver": "GTiff",
+                                 "height": out_image.shape[1],
+                                 "width": out_image.shape[2],
+                                 "transform": out_transform})
+                with rasterio.open(TEMP_PATH, "w", **out_meta) as dest:
+                    dest.write(out_image)
 
-            # calculate stat per district
-            stats = []
-            src = rasterio.open(TEMP_PATH)
-            for ix, row in df_districts.iterrows():
-                district = row['ADM1_EN']
-                try:
-                    outImage, outMeta = clipTiffWithShapes(src, [row["geometry"]])
+                # calculate stat per district
+                stats = []
+                src = rasterio.open(TEMP_PATH)
+                for ix, row in df_districts.iterrows():
+                    district = row['ADM1_EN']
+                    try:
+                        outImage, outMeta = clipTiffWithShapes(src, [row["geometry"]])
 
-                    statsDistrict = calculateRasterStats(district, outImage)
-                    if statsDistrict['affected_population'] > 0.:
-                        stats.append(statsDistrict)
-                except ValueError:
-                    pass
-            src.close()
+                        statsDistrict = calculateRasterStats(district, outImage)
+                        if statsDistrict['affected_population'] > 0.:
+                            stats.append(statsDistrict)
+                    except ValueError:
+                        pass
+                src.close()
 
-            # save stat per district
-            for idx, stat_region in enumerate(stats):
-                stat_region['date'] = date
-                df_impact = df_impact.append(pd.Series(stat_region), ignore_index=True)
+                # save stat per district
+                for idx, stat_region in enumerate(stats):
+                    stat_region['date'] = date
+                    df_impact = df_impact.append(pd.Series(stat_region), ignore_index=True)
+        except:
+            pass
     df_impact.to_csv(os.path.join(output_dir, 'impact_data_'+str(year)+'.csv'))
 print(df_impact.head())
 df_impact.to_csv(os.path.join(output_dir, 'impact_data.csv'))
