@@ -63,8 +63,6 @@ for year in tqdm(years):
             # polygonize flood extents
             if os.path.exists(TEMP_DIR_PATH):
                 rmtree(TEMP_DIR_PATH)
-            # WINDOWS: process_print(["python", GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
-            #                        "-f", "ESRI Shapefile", TEMP_DIR_PATH])
             process_print([GDAL_POLYGONIZE, os.path.join(flood_dir, year, flood_raster),
                            "-f", "ESRI Shapefile", TEMP_DIR_PATH])
 
@@ -109,5 +107,6 @@ for year in tqdm(years):
         except:
             pass
     df_impact.to_csv(os.path.join(output_dir, 'impact_data_'+str(year)+'.csv'))
+
 print(df_impact.head())
 df_impact.to_csv(os.path.join(output_dir, 'impact_data.csv'))
